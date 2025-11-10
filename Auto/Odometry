@@ -1,1 +1,101 @@
+package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
+
+@Autonomous(name = "DecodeAuto", group = "Autonomous")
+public class DecodeAuto extends LinearOpMode {
+
+    private DcMotor frontLeft, frontRight, backLeft, backRight;
+    private DcMotor outtake, ramp, intake;
+    private Servo blocker;
+
+    @Override
+    public void runOpMode() {
+
+        // Drive motors
+        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
+        backRight = hardwareMap.get(DcMotor.class, "backRight");
+
+        // Mechanisms + odometry
+        outtake = hardwareMap.get(DcMotor.class, "outtake");
+        ramp = hardwareMap.get(DcMotor.class, "ramp");
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        blocker = hardwareMap.get(Servo.class, "blocker");
+
+        // Reverse left drive motors
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
+        backLeft.setDirection(DcMotor.Direction.REVERSE);
+
+        // Coasting stop by default
+        for (DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight}) {
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        }
+
+        // Reset encoders for odometry
+        ramp.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        ramp.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        waitForStart();
+
+        if (opModeIsActive()) {
+
+            outtake.setPower(0.88);
+            intake.setPower(-0.1);
+
+            // 1️⃣ Move backward 9000
+            moveBackwardRightOnly(-10000);
+
+            // 2️⃣ Pulse shoot 3x
+            blocker.setPosition(0.9);
+            for (int i = 0; i < 3; i++) {
+                ramp.setPower(0.6);
+                sleep(1600);
+                ramp.setPower(0);
+                sleep(1000);
+            }
+            blocker.setPosition(0.5);
+
+            // Reset encoder after pulse
+            ramp.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            ramp.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+            // 3️⃣ Move backward 3000
+            moveBackwardRightOnly(-2000);
+
+            // 4️⃣ Turn right 200 ticks
+            turnRightTicks(150);
+
+            // 5️⃣ Strafe right 200 ticks
+            strafeRightTicks(-3800);
+
+            // 6️⃣ Move forward while intaking
+            blocker.setPosition(0.5);
+            intake.setPower(-0.2);
+            ramp.setPower(1.0);
+            moveForwardRightOnly(5000, 0.4);
+
+            stopAllMotors();
+        }
+    }
+
+    // --- Movement Helpers ---
+
+    private void moveBackwardRightOnly(int targetTicks) {
+        double drivePower = -0.7;
+        ramp.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        ramp.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        while (opModeIsActive()) {
+            int rightPos = ramp.getCurrentPosition();
+            telemetry.addData("Moving Backward (ramp)", rightPos);
+            telemetry.update();
+
+            if (rightPos <= targetTicks) break;
+            setDrivePower(drivePower, drivePower, drivePower, drivePower);
+        }
+... (86 lines left)
